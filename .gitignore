@@ -1,0 +1,29 @@
+# Compiled launcher + webview runtime.
+# These are build outputs from the parent template (not source of this app).
+# Cloners grab them from the latest Brave.zip in Releases and drop them here.
+Brave.exe
+webview.dll
+
+# Vendored 3rd-party Ubuntu 22.04 rootfs seed (~440 MB). Bundled inside Brave.zip.
+linux/ubuntu-base.tar.gz
+
+# xz download used only by Setup.ps1's missing-rootfs fallback (repacked to gzip).
+*.tar.xz
+
+# Per-machine runtime state — never commit or ship any of this.
+wsl/
+linux/rootfs.tar.gz
+linux/rootfs.setup_hash
+__pycache__/
+*.pyc
+cache/
+*.log
+braveauto-session-*.md
+Setup.log
+
+# Local build outputs
+build/
+Brave.zip
+
+# Internal working log (local-only; not project documentation).
+STATUS.md

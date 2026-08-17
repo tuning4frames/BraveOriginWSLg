@@ -1,0 +1,12 @@
+{
+    "name": "Brave",
+    "title": "Brave Origin for Windows",
+    "distro": "linbox-Brave",
+    "deps": "",
+    "setup": "bash /opt/app/setup.sh",
+    "start": "bash /opt/app/start.sh",
+    "port": 9612,
+    "width": 1100,
+    "height": 750,
+    "terminal": true
+}

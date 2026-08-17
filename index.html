@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brave Origin for Windows</title>
+<style>
+  :root {
+    --bg:          #0b0b0e;
+    --bg-chrome:   #14141a;
+    --bg-raised:   #1f1f28;
+    --bg-active:   #2a2a33;
+    --border:      #26262d;
+    --text:        #e7e7ea;
+    --text-dim:    #a2a2a8;
+    --text-dimmer: #6b6b72;
+    --accent:      #4a7bc0;
+    --accent-hi:   #5d8dd0;
+    --danger:      #c1362c;
+    --danger-hi:   #d94638;
+    --info:        #2d4057;
+    --info-bd:     #3d5266;
+  }
+  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+               font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif; overflow:hidden; }
+  button { font:inherit; }
+
+  /* Top chrome */
+  #topbar { position:fixed; top:0; left:0; right:0; height:42px; background:var(--bg-chrome);
+            border-bottom:1px solid var(--border); display:flex; align-items:center;
+            padding:0 10px; gap:10px; z-index:10; }
+  .tabs { display:flex; gap:2px; }
+  .tab { padding:7px 14px; border-radius:6px; cursor:pointer; color:var(--text-dim);
+         font-size:13px; user-select:none; transition:background .12s,color .12s; }
+  .tab:hover { background:var(--bg-raised); color:var(--text); }
+  .tab.active { background:var(--bg-active); color:#fff; }
+  .spacer { flex:1; }
+  #shutdown-btn { background:var(--danger); color:#fff; border:0; border-radius:5px;
+                  padding:5px 10px; font-size:11px; cursor:pointer; }
+  #shutdown-btn:hover { background:var(--danger-hi); }
+
+  /* Update banner */
+  #banner { position:fixed; top:42px; left:0; right:0; background:var(--info);
+            border-bottom:1px solid var(--info-bd); color:#fff; padding:10px 14px;
+            display:none; align-items:center; gap:10px; z-index:9; }
+  #banner.show { display:flex; }
+  #banner .icon { font-size:17px; }
+  #banner .msg  { flex:1; }
+  #banner button { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.22);
+                   color:#fff; padding:6px 12px; border-radius:5px; cursor:pointer;
+                   margin-left:4px; }
+  #banner button:hover { background:rgba(255,255,255,.25); }
+  #banner button.primary { background:var(--accent); border-color:var(--accent-hi); }
+  #banner button.primary:hover { background:var(--accent-hi); }
+
+  /* Panes — kept mounted so the VNC iframe never disconnects when tabs change.
+     !important on .hidden is deliberate: #pane-logs's `display:flex` has higher
+     ID-level specificity than a plain `.pane.hidden { display:none }`, so
+     without !important the Logs pane would never actually hide, and every tab
+     would show its content overlaid on top of whatever else is visible. */
+  .pane { position:fixed; top:42px; left:0; right:0; bottom:0; overflow:hidden; }
+  .pane.hidden { display:none !important; }
+  body.banner-shown .pane { top:84px; }
+
+  /* Brave pane (native WSLg window status) */
+  #pane-browser { display:flex; align-items:center; justify-content:center;
+                  background:var(--bg); padding:20px; }
+  #brave-card { background:var(--bg-raised); border:1px solid var(--border);
+                border-radius:12px; padding:28px 32px; max-width:460px; text-align:center; }
+  #brave-card h2 { margin:0 0 6px 0; font-size:17px; color:#fff; }
+  #brave-card .sub { color:var(--text-dim); font-size:12px; margin-bottom:18px; }
+  #brave-status { font-size:13px; margin-bottom:18px; }
+  #brave-status .dot { display:inline-block; width:9px; height:9px; border-radius:50%;
+                       margin-right:7px; vertical-align:middle; }
+  #brave-status.up   .dot { background:#3fb950; }
+  #brave-status.down .dot { background:#c1362c; }
+  #brave-status.up   { color:#9be3a4; }
+  #brave-status.down { color:#ff9b9b; }
+  #brave-card button { background:var(--accent); border:1px solid var(--accent-hi);
+                       color:#fff; padding:9px 18px; border-radius:7px; cursor:pointer;
+                       font:inherit; font-size:13px; }
+  #brave-card button:hover { background:var(--accent-hi); }
+  #brave-card button:disabled { opacity:.5; cursor:default; }
+  #brave-card .hint { color:var(--text-dimmer); font-size:11px; margin-top:14px;
+                      line-height:1.5; }
+
+  /* Logs pane */
+  #pane-logs { display:flex; flex-direction:column; background:var(--bg); }
+  #logs-toolbar { background:var(--bg-chrome); border-bottom:1px solid var(--border);
+                  padding:8px 12px; display:flex; gap:10px; align-items:center; }
+  #logs-toolbar label { color:var(--text-dim); font-size:12px; }
+  #logs-toolbar select, #logs-toolbar button {
+      background:var(--bg-raised); border:1px solid #2f2f3a; color:var(--text);
+      padding:5px 10px; border-radius:5px; cursor:pointer; }
+  #logs-toolbar select:hover, #logs-toolbar button:hover { background:#262631; }
+  #logs-toolbar .size { color:var(--text-dimmer); font-size:12px; font-variant-numeric:tabular-nums; }
+  #logs-content { flex:1; overflow:auto; padding:12px 16px; color:#c6c6cd;
+                  font:12px/1.55 "JetBrains Mono",Menlo,Consolas,monospace;
+                  white-space:pre-wrap; word-break:break-word; }
+  #logs-content.empty { color:var(--text-dimmer); font-style:italic; }
+
+  /* Terminal pane */
+  #pane-terminal { display:flex; flex-direction:column; background:#0a0a0d; }
+  #term-output { flex:1; overflow:auto; padding:12px 16px;
+                 font:12px/1.55 "JetBrains Mono",Menlo,Consolas,monospace;
+                 color:#d4d4da; white-space:pre-wrap; word-break:break-word; }
+  #term-output .entry { margin:0 0 6px 0; }
+  #term-output .cmd   { color:#7ee787; font-weight:600; }
+  #term-output .out   { color:#d4d4da; }
+  #term-output .err   { color:#ff9b9b; }
+  #term-output .meta  { color:#6e6e79; font-style:italic; font-size:11px; }
+  #term-output .empty { color:var(--text-dimmer); font-style:italic; }
+  #term-input-row { display:flex; gap:8px; padding:10px 12px;
+                    background:var(--bg-chrome); border-top:1px solid var(--border);
+                    align-items:center; }
+  #term-input-row .prompt { color:#7ee787; font:13px/1 "JetBrains Mono",monospace; }
+  #term-input-row input { flex:1; background:var(--bg); border:1px solid var(--border);
+                          color:var(--text); padding:7px 10px; border-radius:5px;
+                          font:12px "JetBrains Mono",Menlo,Consolas,monospace; outline:none; }
+  #term-input-row input:focus { border-color:var(--accent); }
+  #term-input-row button { background:var(--bg-raised); border:1px solid #2f2f3a;
+                           color:var(--text); padding:7px 14px; border-radius:5px;
+                           cursor:pointer; font:inherit; }
+  #term-input-row button:hover { background:#262631; }
+  #term-input-row button.danger { background:transparent; color:var(--text-dim); }
+  #term-input-row button.danger:hover { background:rgba(193,54,44,.2); color:#fff; }
+
+  /* Settings pane */
+  #pane-settings { padding:22px 28px; overflow:auto; }
+  #pane-settings h2 { margin:0 0 18px 0; font-size:16px; color:#fff; }
+  .setting-row { display:flex; align-items:center; padding:16px 0;
+                 border-bottom:1px solid var(--border); gap:20px; }
+  .setting-row:last-child { border-bottom:0; }
+  .setting-label { flex:1; }
+  .setting-label h3 { margin:0 0 4px 0; font-size:13px; color:var(--text); font-weight:600; }
+  .setting-label p  { margin:0; font-size:12px; color:var(--text-dim); max-width:520px; }
+  .toggle { position:relative; width:40px; height:22px; background:#2c2c35; border-radius:11px;
+            cursor:pointer; transition:background .15s; flex-shrink:0; }
+  .toggle.on { background:var(--accent); }
+  .toggle::after { content:""; position:absolute; top:2px; left:2px; width:18px; height:18px;
+                    background:#fff; border-radius:50%; transition:left .15s; }
+  .toggle.on::after { left:20px; }
+  .setting-row button.secondary {
+      background:var(--bg-raised); border:1px solid #2f2f3a; color:var(--text);
+      padding:7px 14px; border-radius:5px; cursor:pointer; flex-shrink:0; }
+  .setting-row button.secondary:hover { background:#262631; }
+
+  /* Shutdown overlay */
+  #overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+             background:rgba(0,0,0,.82); z-index:100; }
+  #overlay.show { display:flex; }
+  #overlay .msg { padding:20px 28px; border-radius:10px; background:#18181c;
+                  border:1px solid #2a2a32; }
+
+  /* Custom dark modals — replace the native confirm()/alert() (which show as
+     a white strip at the top of the webview in Chromium) with a modal styled
+     to match the rest of the app. */
+  .modal-overlay { position:fixed; inset:0; display:flex; align-items:center;
+                   justify-content:center; background:rgba(0,0,0,.72);
+                   z-index:200; opacity:0; transition:opacity .12s ease-out; }
+  .modal-overlay.show { opacity:1; }
+  .modal { background:var(--bg-raised); color:var(--text);
+           border:1px solid var(--border); border-radius:10px;
+           padding:22px 24px 16px; min-width:320px; max-width:500px;
+           box-shadow:0 16px 40px rgba(0,0,0,.6);
+           transform:scale(.96); transition:transform .12s ease-out; }
+  .modal-overlay.show .modal { transform:scale(1); }
+  .modal h3 { margin:0 0 8px 0; font-size:15px; color:#fff; font-weight:600; }
+  .modal p  { margin:0 0 20px 0; color:var(--text-dim); line-height:1.5;
+              font-size:13px; white-space:pre-wrap; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; }
+  .modal-btn { background:var(--bg-active); border:1px solid var(--border);
+               color:var(--text); padding:7px 16px; border-radius:6px;
+               cursor:pointer; font:inherit; transition:background .1s; }
+  .modal-btn:hover { background:#32323d; }
+  .modal-btn.primary { background:var(--accent); border-color:var(--accent-hi); color:#fff; }
+  .modal-btn.primary:hover { background:var(--accent-hi); }
+  .modal-btn.danger  { background:var(--danger);  border-color:var(--danger-hi);  color:#fff; }
+  .modal-btn.danger:hover  { background:var(--danger-hi); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="tabs">
+    <div class="tab active" data-tab="browser">Brave</div>
+    <div class="tab"        data-tab="logs">Logs</div>
+    <div class="tab"        data-tab="terminal">Terminal</div>
+    <div class="tab"        data-tab="settings">Settings</div>
+  </div>
+  <div class="spacer"></div>
+  <button id="shutdown-btn" onclick="shutdownApp()" title="Stop all Brave processes and close the app">&#9211; Shut down</button>
+</div>
+
+<div id="banner">
+  <span class="icon">&#x2B06;</span>
+  <div class="msg" id="banner-msg">Update available.</div>
+  <button class="primary" onclick="applyUpdate()">Update</button>
+  <button onclick="snoozeUpdate()">Remind later</button>
+  <button onclick="dismissBanner()">Ignore</button>
+</div>
+
+<div id="pane-browser" class="pane">
+  <div id="brave-card">
+    <h2>Brave Origin</h2>
+    <div class="sub">Runs as a native window on your desktop (WSLg)</div>
+        <div id="brave-status" class="down"><span class="dot"></span>Checking&hellip;</div>
+        <div class="brave-btns" style="display:flex;gap:10px;justify-content:center">
+          <button id="brave-launch-btn" onclick="launchBrave()">Launch Brave</button>
+          <button id="brave-stop-btn" onclick="stopBrave()">Stop Brave</button>
+        </div>
+    <div class="hint">
+      Brave opens as its own Windows window &mdash; not inside this panel.<br>
+      Use Logs / Terminal / Settings to manage it.
+    </div>
+  </div>
+</div>
+
+<div id="pane-logs" class="pane hidden">
+  <div id="logs-toolbar">
+    <label for="log-select">Source</label>
+    <select id="log-select"></select>
+    <span class="size" id="log-size"></span>
+    <div class="spacer" style="flex:1"></div>
+    <label><input type="checkbox" id="auto-scroll" checked> auto-scroll</label>
+    <button onclick="refreshLogs(true)">Refresh</button>
+  </div>
+  <div id="logs-content" class="empty">Loading&hellip;</div>
+</div>
+
+<div id="pane-terminal" class="pane hidden">
+  <div id="term-output" class="empty">Run a command in the Linux environment. Each command runs in a fresh bash subshell (state doesn't persist — chain with &amp;&amp;).</div>
+  <div id="term-input-row">
+    <span class="prompt">$</span>
+    <input id="term-input" type="text" placeholder="e.g. ls -la /opt  ·  brave-origin-nightly --version  ·  df -h" spellcheck="false" autocomplete="off">
+    <button onclick="runTermCmd()">Run</button>
+    <button class="danger" onclick="clearTerm()" title="Clear output">Clear</button>
+  </div>
+</div>
+
+<div id="pane-settings" class="pane hidden">
+  <h2>Settings</h2>
+  <div class="setting-row">
+    <div class="setting-label">
+      <h3>Automatic updates</h3>
+      <p>When enabled, Brave Origin Nightly is upgraded automatically on each startup if a newer nightly build is available on GitHub. The running Brave keeps the old version until the app is restarted.</p>
+    </div>
+    <div class="toggle" id="toggle-auto-update" onclick="toggleAutoUpdate()"></div>
+  </div>
+  <div class="setting-row">
+    <div class="setting-label">
+      <h3>Version</h3>
+      <p id="installed-version">Checking&hellip;</p>
+    </div>
+    <button class="secondary" onclick="applyUpdate()" id="manual-update-btn">Check &amp; update</button>
+  </div>
+  <div class="setting-row">
+    <div class="setting-label">
+      <h3>Logs</h3>
+      <p>Every start, every service, every update run is captured in <code>/root/.vnc/*.log</code> inside the distro and streamed to the Logs tab. Switch to that tab to see what the app is doing right now.</p>
+    </div>
+    <button class="secondary" onclick="switchTab('logs')">Open Logs</button>
+  </div>
+</div>
+
+<div id="overlay"><div class="msg">Shutting down&hellip;</div></div>
+
+<script>
+  // The sidecar listens on port 9612. Build the base URL from the current
+  // host so WSL's localhost forwarding + file:// edge cases all work.
+  const API = `${location.protocol}//${location.hostname}:9612`;
+  const API_TOKEN = '__BRAVE_API_TOKEN__';
+
+  function apiFetch(path, options = {}) {
+    const headers = Object.assign(
+      { 'X-Brave-Token': API_TOKEN },
+      options.headers || {}
+    );
+    return fetch(`${API}${path}`, Object.assign({}, options, { headers }));
+  }
+
+  const panes = {
+    browser:  document.getElementById('pane-browser'),
+    logs:     document.getElementById('pane-logs'),
+    terminal: document.getElementById('pane-terminal'),
+    settings: document.getElementById('pane-settings'),
+  };
+
+  // -- Custom dark modals (replace native confirm/alert) ---------------
+
+  function showModal({ title, message, buttons }) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+
+      if (title) {
+        const h = document.createElement('h3');
+        h.textContent = title;
+        modal.appendChild(h);
+      }
+      const p = document.createElement('p');
+      p.textContent = message;
+      modal.appendChild(p);
+
+      const actions = document.createElement('div');
+      actions.className = 'modal-actions';
+      for (const btn of buttons) {
+        const el = document.createElement('button');
+        el.className = 'modal-btn' + (btn.variant ? ' ' + btn.variant : '');
+        el.textContent = btn.label;
+        el.addEventListener('click', () => {
+          cleanup();
+          resolve(btn.value);
+        });
+        actions.appendChild(el);
+      }
+      modal.appendChild(actions);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      const onKey = (e) => {
+        if (e.key === 'Escape') {
+          document.removeEventListener('keydown', onKey);
+          cleanup();
+          resolve(buttons[0].value);  // first button is the cancel/default
+        } else if (e.key === 'Enter') {
+          document.removeEventListener('keydown', onKey);
+          cleanup();
+          resolve(buttons[buttons.length - 1].value);  // last button is the accept
+        }
+      };
+      document.addEventListener('keydown', onKey);
+
+      const cleanup = () => {
+        document.removeEventListener('keydown', onKey);
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 150);
+      };
+
+      // Force reflow so the transition animates in
+      void overlay.offsetHeight;
+      overlay.classList.add('show');
+    });
+  }
+
+  function showConfirm(message, title) {
+    return showModal({
+      title: title || 'Confirm',
+      message,
+      buttons: [
+        { label: 'Cancel', value: false },
+        { label: 'OK',     value: true, variant: 'primary' },
+      ],
+    });
+  }
+
+  function showDangerConfirm(message, title, acceptLabel) {
+    return showModal({
+      title: title || 'Confirm',
+      message,
+      buttons: [
+        { label: 'Cancel',                     value: false },
+        { label: acceptLabel || 'Shut down',   value: true, variant: 'danger' },
+      ],
+    });
+  }
+
+  document.querySelectorAll('.tab').forEach(el =>
+    el.addEventListener('click', () => switchTab(el.dataset.tab))
+  );
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(el =>
+      el.classList.toggle('active', el.dataset.tab === name)
+    );
+    for (const k in panes) panes[k].classList.toggle('hidden', k !== name);
+    if (name === 'logs')     refreshLogs(true);
+    if (name === 'settings') refreshSettings();
+    if (name === 'terminal') document.getElementById('term-input').focus();
+    if (name === 'browser')  checkBraveStatus();
+  }
+
+  // -- Terminal ----------------------------------------------------------
+
+  const termHistory = [];
+  let termHistoryIdx = -1;
+
+  function appendTermEntry(cls, text) {
+    const out = document.getElementById('term-output');
+    if (out.classList.contains('empty')) {
+      out.classList.remove('empty');
+      out.textContent = '';
+    }
+    const el = document.createElement('div');
+    el.className = 'entry ' + cls;
+    el.textContent = text;
+    out.appendChild(el);
+    out.scrollTop = out.scrollHeight;
+  }
+
+  function clearTerm() {
+    const out = document.getElementById('term-output');
+    out.innerHTML = '';
+    out.classList.add('empty');
+    out.textContent = '(cleared)';
+    document.getElementById('term-input').focus();
+  }
+
+  async function runTermCmd() {
+    const input = document.getElementById('term-input');
+    const cmd = input.value;
+    if (!cmd.trim()) return;
+    input.value = '';
+    termHistory.push(cmd);
+    termHistoryIdx = termHistory.length;
+
+    appendTermEntry('cmd', '$ ' + cmd);
+    try {
+      const r = await apiFetch('/api/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd }),
+      });
+      const d = await r.json();
+      if (d.stdout) appendTermEntry('out', d.stdout.replace(/\n$/, ''));
+      if (d.stderr) appendTermEntry('err', d.stderr.replace(/\n$/, ''));
+      if (d.error)  appendTermEntry('err', 'error: ' + d.error);
+      const meta = [];
+      if (typeof d.exit_code === 'number' && d.exit_code !== 0)
+        meta.push('exit ' + d.exit_code);
+      if (typeof d.duration_ms === 'number')
+        meta.push(d.duration_ms + ' ms');
+      if (meta.length) appendTermEntry('meta', '(' + meta.join(' · ') + ')');
+    } catch (e) {
+      appendTermEntry('err', 'fetch failed: ' + e);
+    }
+    input.focus();
+  }
+
+  document.getElementById('term-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runTermCmd();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (termHistoryIdx > 0) {
+        termHistoryIdx--;
+        e.target.value = termHistory[termHistoryIdx] || '';
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (termHistoryIdx < termHistory.length - 1) {
+        termHistoryIdx++;
+        e.target.value = termHistory[termHistoryIdx] || '';
+      } else {
+        termHistoryIdx = termHistory.length;
+        e.target.value = '';
+      }
+    }
+  });
+
+  // -- Brave native window status / launch -----------------------------
+
+  async function checkBraveStatus() {
+    const el = document.getElementById('brave-status');
+    const btn = document.getElementById('brave-launch-btn');
+    if (!el) return;
+    try {
+      const r = await apiFetch('/api/brave/status');
+      const d = await r.json();
+      if (d.running) {
+        el.className = 'up';
+        el.innerHTML = '<span class="dot"></span>Brave is running (native window)';
+        btn.textContent = 'Relaunch Brave';
+      } else {
+        el.className = 'down';
+        el.innerHTML = '<span class="dot"></span>Brave is not running';
+        btn.textContent = 'Launch Brave';
+      }
+      btn.disabled = false;
+    } catch (e) {
+      el.className = 'down';
+      el.textContent = 'status unknown';
+      btn.disabled = false;
+    }
+  }
+
+  async function launchBrave() {
+    const btn = document.getElementById('brave-launch-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = 'Launching…';
+    try {
+      await apiFetch('/api/brave/launch', { method: 'POST' });
+    } catch (e) {}
+    // Give it a moment, then refresh status.
+    setTimeout(checkBraveStatus, 1200);
+  }
+
+  async function stopBrave() {
+    const btn = document.getElementById('brave-stop-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = 'Stopping…';
+    try {
+      await apiFetch('/api/brave/stop', { method: 'POST' });
+    } catch (e) {}
+    // Give it a moment, then refresh status.
+    setTimeout(checkBraveStatus, 1200);
+  }
+
+  // Poll Brave status every 3s while the Brave tab is visible
+  setInterval(() => {
+    if (!panes.browser.classList.contains('hidden')) checkBraveStatus();
+  }, 3000);
+
+  // -- Update check + banner --------------------------------------------
+
+  let settings = { auto_update: false, snooze_until: 0 };
+  let sessionDismissed = false;
+
+  async function checkForUpdate() {
+    try {
+      const r = await apiFetch('/api/update-check');
+      const d = await r.json();
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (d.updateAvailable && !sessionDismissed && (settings.snooze_until || 0) < nowSec) {
+        showBanner(`Brave Origin Nightly ${d.latest} is available. You have ${d.installed || 'unknown'}.`);
+      }
+      const iv = document.getElementById('installed-version');
+      if (iv) iv.textContent = `Installed: ${d.installed || 'unknown'}   •   Latest: ${d.latest || 'unknown'}`;
+    } catch (e) {
+      console.warn('update-check failed', e);
+    }
+  }
+
+  function showBanner(msg) {
+    document.getElementById('banner-msg').textContent = msg;
+    document.getElementById('banner').classList.add('show');
+    document.body.classList.add('banner-shown');
+  }
+
+  function hideBanner() {
+    document.getElementById('banner').classList.remove('show');
+    document.body.classList.remove('banner-shown');
+  }
+
+  function dismissBanner() {
+    sessionDismissed = true;
+    hideBanner();
+  }
+
+  async function snoozeUpdate() {
+    const next = Math.floor(Date.now() / 1000) + 24 * 3600;
+    try {
+      const r = await apiFetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snooze_until: next }),
+      });
+      settings = await r.json();
+    } catch (e) {}
+    hideBanner();
+  }
+
+  async function applyUpdate() {
+    const ok = await showConfirm(
+      'Upgrade brave-origin-nightly now?\n\nThe running Brave will keep the old version until the app is shut down and relaunched.',
+      'Update Brave Origin Nightly'
+    );
+    if (!ok) return;
+    hideBanner();
+    switchTab('logs');
+    // Point the dropdown at the update log so the user sees progress
+    const sel = document.getElementById('log-select');
+    if (sel) { sel.value = 'update'; currentLog = 'update'; renderLog(); }
+    try {
+      await apiFetch('/api/update', { method: 'POST' });
+    } catch (e) {}
+    // Poll until the update completes, refreshing logs each time
+    const poll = async () => {
+      while (true) {
+        await refreshLogs(false);
+        try {
+          const r = await apiFetch('/api/update/status');
+          const d = await r.json();
+          if (!d.running) break;
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 1500));
+      }
+      await refreshLogs(false);
+      await checkForUpdate();
+    };
+    poll();
+  }
+
+  // -- Logs viewer -------------------------------------------------------
+
+  let logFiles  = [];
+  let currentLog = 'start';
+
+  async function refreshLogs(forceRedraw) {
+    try {
+      const r = await apiFetch('/api/logs');
+      const d = await r.json();
+      logFiles = d.files || [];
+      const sel = document.getElementById('log-select');
+      if (sel.options.length !== logFiles.length) {
+        const prev = currentLog;
+        sel.innerHTML = '';
+        for (const f of logFiles) {
+          const opt = document.createElement('option');
+          opt.value = f.name;
+          opt.textContent = f.name;
+          sel.appendChild(opt);
+        }
+        const names = logFiles.map(f => f.name);
+        sel.value   = names.includes(prev) ? prev : names[0];
+        currentLog  = sel.value;
+        sel.onchange = () => { currentLog = sel.value; renderLog(); };
+      }
+      renderLog(forceRedraw);
+    } catch (e) {
+      const el = document.getElementById('logs-content');
+      el.textContent = `Failed to load logs: ${e}`;
+      el.classList.add('empty');
+    }
+  }
+
+  function renderLog(forceRedraw) {
+    const f = logFiles.find(x => x.name === currentLog);
+    const el = document.getElementById('logs-content');
+    const sizeEl = document.getElementById('log-size');
+    const raw = (f && f.content) || '';
+    const display = !raw.trim()
+      ? (f ? `(${f.name}.log is empty)` : '(no source selected)')
+      : raw;
+
+    // Always update the size label — that's one node, can't wipe a selection
+    if (sizeEl && f) sizeEl.textContent = `${(f.size || 0).toLocaleString()} bytes`;
+
+    // Cheap short-circuit: nothing actually changed → don't touch the DOM
+    // (even el.textContent = sameString clears the selection on some engines).
+    if (el.textContent === display && !forceRedraw) return;
+
+    // Don't clobber the user's text selection. If they're highlighting
+    // something inside logs-content, skip this refresh — the log will update
+    // on the next poll after they release the selection.
+    if (!forceRedraw) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        try {
+          const anchor = sel.getRangeAt(0).commonAncestorContainer;
+          if (el.contains(anchor) || el === anchor) {
+            showLogsPausedBadge();
+            return;
+          }
+        } catch (e) { /* detached range */ }
+      }
+    }
+    hideLogsPausedBadge();
+
+    el.classList.toggle('empty', !raw.trim());
+    el.textContent = display;
+
+    if (document.getElementById('auto-scroll').checked) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+
+  // Tiny "paused" hint shown in the toolbar while the user has a selection
+  function showLogsPausedBadge() {
+    let b = document.getElementById('logs-paused');
+    if (!b) {
+      b = document.createElement('span');
+      b.id = 'logs-paused';
+      b.textContent = '⏸ paused (release selection to resume)';
+      b.style.cssText = 'color:var(--text-dim);font-size:11px;margin-left:6px;';
+      const sizeEl = document.getElementById('log-size');
+      if (sizeEl) sizeEl.parentNode.insertBefore(b, sizeEl.nextSibling);
+    }
+    b.style.display = '';
+  }
+  function hideLogsPausedBadge() {
+    const b = document.getElementById('logs-paused');
+    if (b) b.style.display = 'none';
+  }
+
+  // Poll logs every 2s while the Logs tab is visible
+  setInterval(() => {
+    if (!panes.logs.classList.contains('hidden')) refreshLogs(false);
+  }, 2000);
+
+  // -- Settings ----------------------------------------------------------
+
+  async function refreshSettings() {
+    try {
+      const r = await apiFetch('/api/settings');
+      settings = await r.json();
+    } catch (e) {}
+    document.getElementById('toggle-auto-update').classList.toggle('on', !!settings.auto_update);
+    await checkForUpdate();
+  }
+
+  async function toggleAutoUpdate() {
+    const next = !settings.auto_update;
+    try {
+      const r = await apiFetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto_update: next }),
+      });
+      settings = await r.json();
+    } catch (e) {}
+    document.getElementById('toggle-auto-update').classList.toggle('on', !!settings.auto_update);
+  }
+
+  // -- Shutdown ----------------------------------------------------------
+
+  async function shutdownApp() {
+    const ok = await showDangerConfirm(
+      'This will stop Brave and every process it spawned, then close this window.',
+      'Shut down Brave?'
+    );
+    if (!ok) return;
+    document.getElementById('overlay').classList.add('show');
+    try {
+      await apiFetch('/api/shutdown', { method: 'POST', keepalive: true });
+    } catch (e) {}
+    // Close the webview window itself. closeApp is a JS binding exposed by
+    // the template's main.c (see webview_bind "closeApp") that calls
+    // webview_terminate on the C side — without it, stopping the services
+    // would leave an empty Brave.exe shell that the user has to dismiss by
+    // hand. window.close() is a fallback for non-webview contexts.
+    setTimeout(() => {
+      try {
+        if (typeof window.closeApp === 'function') {
+          window.closeApp();
+        } else {
+          window.close();
+        }
+      } catch (e) {
+        console.warn('closeApp failed', e);
+      }
+      document.querySelector('#overlay .msg').textContent = 'Stopped.';
+    }, 700);
+  }
+
+  // -- Init --------------------------------------------------------------
+
+  (async () => {
+    await refreshSettings();     // loads settings + triggers checkForUpdate
+    await refreshLogs(true);     // populates dropdown for the logs tab
+  })();
+</script>
+</body>
+</html>
