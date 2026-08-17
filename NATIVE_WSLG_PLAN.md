@@ -1,4 +1,4 @@
-# Brave Origin for Windows — Native WSLg Rewrite Plan
+# Brave Origin for Windows: Native WSLg Rewrite Plan
 
 > Goal: drop the slow, VNC-based integrated launcher and run Brave Origin Nightly as a
 > **native WSLg window**, with Logs / Terminal / Settings in a separate small window.
@@ -6,17 +6,17 @@
 
 ## STATUS: IMPLEMENTED (2026-08-17)
 All Linux-side scripts + UI rewritten in `brave-origin-native/`:
-- `setup.sh` — no VNC stack; WSLg preflight added.
-- `start.sh` — launches Brave natively + `control.py`; no Xtigervnc/openbox/websockify/iptables-mirror.
-- `launch-brave.sh` — shared Brave invocation (GPU enabled).
-- `stop.sh` — drops VNC refs; kills brave + control (9612).
-- `control.py` — serves `index.html` at `/`, adds `/api/brave/status` + `/api/brave/launch`, drops VNC logs.
-- `bridge.py` — simplified to a redirect to `control.py:9612` (no DISTRO_IP hacks).
-- `index.html` — VNC pane replaced by a Brave status/Launch panel.
-- `app.json` — `port` = 9612 (manager UI).
-- `README.md` + `MANUAL_SETUP.md` — native-mode docs.
-- `build-zip.ps1` — now includes `launch-brave.sh`.
-TODO: the Windows `.exe` (portable-linux-in-a-box) rebuild is the only remaining piece — it belongs to the template.
+- `setup.sh`: no VNC stack; WSLg preflight added.
+- `start.sh`: launches Brave natively + `control.py`; no Xtigervnc/openbox/websockify/iptables-mirror.
+- `launch-brave.sh`: shared Brave invocation (GPU enabled).
+- `stop.sh`: drops VNC refs; kills brave + control (9612).
+- `control.py`: serves `index.html` at `/`, adds `/api/brave/status` + `/api/brave/launch`, drops VNC logs.
+- `bridge.py`: simplified to a redirect to `control.py:9612` (no DISTRO_IP hacks).
+- `index.html`: VNC pane replaced by a Brave status/Launch panel.
+- `app.json`: `port` = 9612 (manager UI).
+- `README.md` + `MANUAL_SETUP.md`: native-mode docs.
+- `build-zip.ps1`: now includes `launch-brave.sh`.
+TODO: the Windows `.exe` (portable-linux-in-a-box) rebuild is the only remaining piece: it belongs to the template.
 
 ## Context / Why
 
@@ -24,11 +24,11 @@ Current design (`start.sh`, `bridge.py`) runs Brave inside `Xtigervnc` (VNC fram
 with `--disable-gpu` (software rendering), then VNC-encodes → `websockify` → WebSocket →
 browser canvas inside a WebView2 tab. Problems:
 
-- No GPU (software render only) — `start.sh:215` `--disable-gpu`.
+- No GPU (software render only): `start.sh:215` `--disable-gpu`.
 - Heavy frame path: capture + encode + socket + JS decode + WebView2 repaint.
 - Fragile WSL2 localhost forwarding (`bridge.py` documents `ERR_EMPTY_RESPONSE` race).
 - An `iptables` mirror-guard (`start.sh:21-43`) exists only to stop Brave loading its own
-  loopback UI — a problem created by the embedding approach.
+  loopback UI: a problem created by the embedding approach.
 
 WSLg gives Brave a native Wayland/XWayland surface with **GPU-PV acceleration**, composited
 directly by Windows (RDP). No VNC, no WebSocket, no browser canvas. Audio already uses
@@ -53,7 +53,7 @@ WSLg's PulseServer today, so unchanged.
 
 ## Implementation Steps
 
-### 1. `setup.sh` — Brave-only, WSLg-aware
+### 1. `setup.sh`: Brave-only, WSLg-aware
 - **Remove** from the apt install (`setup.sh:71-78`): `tigervnc-standalone-server`,
   `tigervnc-common`, `novnc`, `websockify`, `openbox`, `xterm`, `xauth`, `x11-utils`.
   Keep: `curl ca-certificates`, PulseAudio client libs (`libpulse0 pulseaudio-utils
@@ -68,12 +68,12 @@ WSLg's PulseServer today, so unchanged.
   (`setup.sh:54-64`).
 - Keep idempotency short-circuit (`setup.sh:22-26`).
 
-### 2. `start.sh` — native Brave launch
+### 2. `start.sh`: native Brave launch
 - **Remove** `Xtigervnc` launch (`start.sh:129-148`), `openbox` (`start.sh:150-152`),
   `websockify` exec (`start.sh:249`), and the `iptables` mirror-guard (`start.sh:21-43`).
-- **Remove** the session/cache "mirror scrub" block (`start.sh:154-199`) — no loopback UI
+- **Remove** the session/cache "mirror scrub" block (`start.sh:154-199`): no loopback UI
   to protect anymore.
-- **Keep** `ensure_audio_support()` (`start.sh:52-107`) — WSLg PulseServer audio stays.
+- **Keep** `ensure_audio_support()` (`start.sh:52-107`): WSLg PulseServer audio stays.
 - **Launch Brave natively** on WSLg's display:
   - Rely on `$WAYLAND_DISPLAY` / `$DISPLAY` (WSLg sets these automatically).
   - **Remove** `--disable-gpu` and `--disable-features=UseOzonePlatform`
@@ -103,7 +103,7 @@ WSLg's PulseServer today, so unchanged.
 - `app.json`: `port` should point at the `control.py` management UI (`9612`), not the old
   noVNC `9611`. Remove VNC-specific width/height (native window sizes itself) or repurpose
   for the management window.
-- `bridge.py`: **simplify** — remove `DISTRO_IP` / `get_distro_ip()` localhost-forwarding
+- `bridge.py`: **simplify**: remove `DISTRO_IP` / `get_distro_ip()` localhost-forwarding
   hacks (the whole `ERR_EMPTY_RESPONSE` mitigation). It only needs to serve/redirect to the
   management UI on `9612`, or the launcher can navigate directly. Keep SIGTERM → stop.sh.
 

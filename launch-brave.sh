@@ -1,5 +1,5 @@
 #!/bin/bash
-# launch-brave.sh — start Brave Origin Nightly as a NATIVE WSLg window.
+# launch-brave.sh: start Brave Origin Nightly as a NATIVE WSLg window.
 #
 # Used by start.sh on boot and by the management UI's "Launch / Relaunch"
 # button (control.py -> POST /api/brave/launch). Kept separate so both
@@ -8,7 +8,7 @@
 # WSLg exports DISPLAY (XWayland at /mnt/wslg/X0) and WAYLAND_DISPLAY into the
 # environment automatically, so we rely on those. Brave is Chromium: it talks
 # to WSLg over X11/XWayland (GPU acceleration works through ANGLE/D3D), so we
-# deliberately do NOT pass --disable-gpu — that's the whole point of going
+# deliberately do NOT pass --disable-gpu: that's the whole point of going
 # native.
 set -e
 

@@ -1,16 +1,16 @@
 #!/bin/bash
-# Nuclear shutdown for the Brave app — kills every process this app spawned.
+# Nuclear shutdown for the Brave app: kills every process this app spawned.
 # Safe to run stand-alone or from the control sidecar.
 #
 # NATIVE MODE: no Xtigervnc / openbox / websockify. We only tear down Brave
 # and the control sidecar (port 9612).
 #
 # Strategy (belt-and-suspenders, in order):
-#   1. Walk the process tree from /run/brave.pid down — catches every child
+#   1. Walk the process tree from /run/brave.pid down: catches every child
 #      that start.sh spawned (including anything that reparented to init).
-#   2. fuser -k on our port — catches anything holding 9612 that somehow
+#   2. fuser -k on our port: catches anything holding 9612 that somehow
 #      escaped the tree (daemons that called setpgrp/setsid).
-#   3. pkill -9 by short name — final paranoia net for brave.
+#   3. pkill -9 by short name: final paranoia net for brave.
 
 set +e
 

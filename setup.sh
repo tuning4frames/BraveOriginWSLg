@@ -1,5 +1,5 @@
 #!/bin/bash
-# Brave Origin Nightly setup — runs once inside linbox-Brave after provisioning.
+# Brave Origin Nightly setup: runs once inside linbox-Brave after provisioning.
 # Idempotent: re-running short-circuits if already installed.
 #
 # All output is tee'd to /root/.vnc/setup.log so the Logs tab in the app UI
@@ -11,7 +11,7 @@
 #   3. THEN use curl to grab the Brave keyring and .deb
 #
 # NATIVE MODE: This build runs Brave as a native WSLg window. The VNC stack
-# (tigervnc / novnc / websockify / openbox) is intentionally NOT installed —
+# (tigervnc / novnc / websockify / openbox) is intentionally NOT installed :
 # WSLg provides the display, so those packages would be dead weight.
 set -e
 

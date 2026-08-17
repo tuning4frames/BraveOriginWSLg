@@ -52,7 +52,7 @@
   #banner button.primary { background:var(--accent); border-color:var(--accent-hi); }
   #banner button.primary:hover { background:var(--accent-hi); }
 
-  /* Panes — kept mounted so the VNC iframe never disconnects when tabs change.
+  /* Panes: kept mounted so the VNC iframe never disconnects when tabs change.
      !important on .hidden is deliberate: #pane-logs's `display:flex` has higher
      ID-level specificity than a plain `.pane.hidden { display:none }`, so
      without !important the Logs pane would never actually hide, and every tab
@@ -151,7 +151,7 @@
   #overlay .msg { padding:20px 28px; border-radius:10px; background:#18181c;
                   border:1px solid #2a2a32; }
 
-  /* Custom dark modals — replace the native confirm()/alert() (which show as
+  /* Custom dark modals: replace the native confirm()/alert() (which show as
      a white strip at the top of the webview in Chromium) with a modal styled
      to match the rest of the app. */
   .modal-overlay { position:fixed; inset:0; display:flex; align-items:center;
@@ -228,7 +228,7 @@
 </div>
 
 <div id="pane-terminal" class="pane hidden">
-  <div id="term-output" class="empty">Run a command in the Linux environment. Each command runs in a fresh bash subshell (state doesn't persist — chain with &amp;&amp;).</div>
+  <div id="term-output" class="empty">Run a command in the Linux environment. Each command runs in a fresh bash subshell (state doesn't persist: chain with &amp;&amp;).</div>
   <div id="term-input-row">
     <span class="prompt">$</span>
     <input id="term-input" type="text" placeholder="e.g. ls -la /opt  ·  brave-origin-nightly --version  ·  df -h" spellcheck="false" autocomplete="off">
@@ -307,7 +307,7 @@
       actions.className = 'modal-actions';
       for (const btn of buttons) {
         const el = document.createElement('button');
-        el.className = 'modal-btn' + (btn.variant ? ' ' + btn.variant : '');
+        el.className = 'modal-btn' + (btn.variant ? ' ' + btn.variant: '');
         el.textContent = btn.label;
         el.addEventListener('click', () => {
           cleanup();
@@ -616,7 +616,7 @@
           sel.appendChild(opt);
         }
         const names = logFiles.map(f => f.name);
-        sel.value   = names.includes(prev) ? prev : names[0];
+        sel.value   = names.includes(prev) ? prev: names[0];
         currentLog  = sel.value;
         sel.onchange = () => { currentLog = sel.value; renderLog(); };
       }
@@ -634,10 +634,10 @@
     const sizeEl = document.getElementById('log-size');
     const raw = (f && f.content) || '';
     const display = !raw.trim()
-      ? (f ? `(${f.name}.log is empty)` : '(no source selected)')
-      : raw;
+      ? (f ? `(${f.name}.log is empty)`: '(no source selected)')
+     : raw;
 
-    // Always update the size label — that's one node, can't wipe a selection
+    // Always update the size label: that's one node, can't wipe a selection
     if (sizeEl && f) sizeEl.textContent = `${(f.size || 0).toLocaleString()} bytes`;
 
     // Cheap short-circuit: nothing actually changed → don't touch the DOM
@@ -645,7 +645,7 @@
     if (el.textContent === display && !forceRedraw) return;
 
     // Don't clobber the user's text selection. If they're highlighting
-    // something inside logs-content, skip this refresh — the log will update
+    // something inside logs-content, skip this refresh: the log will update
     // on the next poll after they release the selection.
     if (!forceRedraw) {
       const sel = window.getSelection();
@@ -730,7 +730,7 @@
     } catch (e) {}
     // Close the webview window itself. closeApp is a JS binding exposed by
     // the template's main.c (see webview_bind "closeApp") that calls
-    // webview_terminate on the C side — without it, stopping the services
+    // webview_terminate on the C side: without it, stopping the services
     // would leave an empty Brave.exe shell that the user has to dismiss by
     // hand. window.close() is a fallback for non-webview contexts.
     setTimeout(() => {

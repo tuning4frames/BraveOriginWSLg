@@ -98,13 +98,13 @@ chmod 600 /run/brave-api-token
 sed "s|__BRAVE_API_TOKEN__|$API_TOKEN|g" /opt/app/index.html > /opt/brave-ui/index.html
 echo "[brave/start] UI wrapper staged at /opt/brave-ui/index.html"
 
-# Launch Brave as a native WSLg window (background — control.py is the
+# Launch Brave as a native WSLg window (background: control.py is the
 # long-running foreground service below).
 echo "[brave/start] launching brave-origin-nightly (native window)"
 bash /opt/app/launch-brave.sh &
 sleep 2
 
-# Control sidecar — /api/shutdown, /api/update, /api/logs, /api/settings,
+# Control sidecar: /api/shutdown, /api/update, /api/logs, /api/settings,
 # /api/brave/status, /api/brave/launch. Binds 0.0.0.0:9612 so the Windows-side
 # WebView2 can reach it through WSL2's localhost forwarding.
 echo "[brave/start] launching control sidecar on 9612"
@@ -118,10 +118,10 @@ echo "[brave/start]   brave-origin-nightly  (native WSLg window)"
 echo "[brave/start]   control.py            (management UI API on 9612)"
 echo "[brave/start] ----"
 echo "[brave/start] For ongoing output switch the Source dropdown to one of:"
-echo "[brave/start]   brave    — Chromium stdout/stderr"
-echo "[brave/start]   control  — sidecar API access log"
-echo "[brave/start]   setup    — first-run install transcript"
-echo "[brave/start]   start    — this boot log"
+echo "[brave/start]   brave   : Chromium stdout/stderr"
+echo "[brave/start]   control : sidecar API access log"
+echo "[brave/start]   setup   : first-run install transcript"
+echo "[brave/start]   start   : this boot log"
 echo "[brave/start] ========================================"
 
 # Keep this script alive so /run/brave.pid stays valid and the app is

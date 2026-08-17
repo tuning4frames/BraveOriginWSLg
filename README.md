@@ -1,9 +1,9 @@
 # Brave Origin (Native WSLg)
 
-> **Beta** — a personal project; more improvements are coming. Not affiliated with Brave Software, Inc.
+> **Beta**: a personal project; more improvements are coming. Not affiliated with Brave Software, Inc.
 
-Run **Brave Origin Nightly** as a real, native Windows window using **WSLg** — no
-VNC, no RDP, GPU-accelerated — packaged as a portable Windows app with a small
+Run **Brave Origin Nightly** as a real, native Windows window using **WSLg**: no
+VNC, no RDP, GPU-accelerated: packaged as a portable Windows app with a small
 manager UI (Logs / Terminal / Settings).
 
 ![beta](https://img.shields.io/badge/status-beta-orange)
@@ -27,11 +27,11 @@ watch logs, and update it without touching WSL by hand.
 - **Auto-update check** for the latest `brave-origin-nightly` build.
 - **Audio** through WSLg's PulseAudio bridge.
 
-## Status — Beta
+## Status: Beta
 
 This is an early, beta-stage project. The core works (Brave runs as a native
 window, the manager UI controls it), but expect rough edges. More improvements
-are planned — see [Roadmap](#roadmap).
+are planned: see [Roadmap](#roadmap).
 
 ### Known limitations
 
@@ -118,7 +118,7 @@ the `portable-linux-in-a-box` template). To produce a release:
    ```
 
 It bundles the scripts, `index.html`, `app.json`, the rootfs, and the two binaries
-into `Brave.zip`. (`linux/ubuntu-base.tar.gz` must already be present — it is
+into `Brave.zip`. (`linux/ubuntu-base.tar.gz` must already be present: it is
 normally committed/bundled; if missing, `Setup.ps1` falls back to downloading an
 Ubuntu 22.04 rootfs.)
 

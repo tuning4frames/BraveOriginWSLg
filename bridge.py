@@ -9,11 +9,11 @@ In native mode the real UI is served by control.py on port 9612 (Logs /
 Terminal / Settings + the staged index.html). This bridge's only jobs are:
 
     1. Serve /api/status (200 once control.py is reachable on 9612).
-    2. Serve / — an HTML page that redirects the webview to control.py.
+    2. Serve /: an HTML page that redirects the webview to control.py.
 
 We redirect to the SAME hostname the browser already used to load this page
 (control.py binds 0.0.0.0, so it's reachable via localhost or the distro IP).
-No DISTRO_IP / localhost-forwarding hacks — those existed only to work around
+No DISTRO_IP / localhost-forwarding hacks: those existed only to work around
 the old VNC/websockify stack, which is gone.
 """
 import http.server

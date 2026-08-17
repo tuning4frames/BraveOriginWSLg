@@ -10,7 +10,7 @@ $stage = Join-Path $env:TEMP ('Brave-zip-' + [Guid]::NewGuid().ToString('N'))
 if (Test-Path $out)   { Remove-Item $out -Force }
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 
-# Stage a clean copy — whitelist only runtime files. Dev tooling
+# Stage a clean copy: whitelist only runtime files. Dev tooling
 # (.gitignore, build-zip.ps1) is deliberately excluded, and
 # transient state (wsl/, cache/, __pycache__/, *.log, rootfs.tar.gz) never
 # gets a chance to be picked up.
@@ -71,6 +71,6 @@ Compress-Archive -Path (Join-Path $dst '*') -DestinationPath $out -CompressionLe
 Remove-Item $stage -Recurse -Force
 
 $info = Get-Item $out
-Write-Host ("out  : {0}" -f $info.FullName)
+Write-Host ("out : {0}" -f $info.FullName)
 $sizeMb = [math]::Round($info.Length / 1MB, 2)
-Write-Host ("size : {0} MB ({1} bytes)" -f $sizeMb, $info.Length)
+Write-Host ("size: {0} MB ({1} bytes)" -f $sizeMb, $info.Length)

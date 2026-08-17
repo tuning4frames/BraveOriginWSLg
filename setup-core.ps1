@@ -3,7 +3,7 @@
     Shared logic for the Brave Origin (native WSLg) setup.
     Dot-sourced by Setup.ps1 (GUI) and Test-Setup.ps1 (headless test).
 
-    Contains only pure functions + helpers — no Windows.Forms, no GUI — so it
+    Contains only pure functions + helpers: no Windows.Forms, no GUI: so it
     can be imported and exercised without a display.
 #>
 

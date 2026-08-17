@@ -390,11 +390,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         sys.stderr.write(f"[{time.strftime('%H:%M:%S')}] {fmt % args}\n")
 
     def _handle_exec(self):
-        """POST /api/exec — run a shell command through `bash -lc`.
+        """POST /api/exec: run a shell command through `bash -lc`.
         Body: {"cmd": "ls -la /opt"}
         Returns: {stdout, stderr, exit_code, duration_ms}.
         Each call spawns a fresh subshell, so state (cwd, env) doesn't persist
-        between calls — chain with && or use `cd X && pwd` style."""
+        between calls: chain with && or use `cd X && pwd` style."""
         data = self._read_body() or {}
         cmd = (data.get("cmd") or "").strip()
         if not cmd:

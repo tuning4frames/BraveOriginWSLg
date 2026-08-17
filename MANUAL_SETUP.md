@@ -1,4 +1,4 @@
-# Manual Setup Guide — Brave Origin for Windows (Native WSLg)
+# Manual Setup Guide: Brave Origin for Windows (Native WSLg)
 
 Prefer doing it by hand, or hit a UAC prompt you'd rather handle yourself? This
 guide reproduces exactly what the launcher does, step by step. You end up with
@@ -69,7 +69,7 @@ wsl -d linbox-Brave -e bash /opt/app/setup.sh
 ```
 
 This: checks WSLg + connectivity + disk space, `apt`-installs Brave's
-dependencies (curl, ca-certificates, PulseAudio client — **no VNC stack**),
+dependencies (curl, ca-certificates, PulseAudio client: **no VNC stack**),
 adds the Brave nightly apt repo, and downloads + installs the latest
 `brave-origin-nightly` `.deb` from GitHub. Needs internet (~120 MB).
 
@@ -129,5 +129,5 @@ if you want a clean slate.
   `wsl --update` + reboot.
 - **No sound:** Logs → `start` should say `audio: PulseAudio reachable`. If not,
   `wsl --update` and relaunch.
-- **Manager UI won't load:** ensure `control.py` is up — Logs → `control`, or
+- **Manager UI won't load:** ensure `control.py` is up: Logs → `control`, or
   `wsl -d linbox-Brave -e pgrep -af control.py`.

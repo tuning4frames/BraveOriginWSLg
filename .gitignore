@@ -10,7 +10,7 @@ linux/ubuntu-base.tar.gz
 # xz download used only by Setup.ps1's missing-rootfs fallback (repacked to gzip).
 *.tar.xz
 
-# Per-machine runtime state — never commit or ship any of this.
+# Per-machine runtime state: never commit or ship any of this.
 wsl/
 linux/rootfs.tar.gz
 linux/rootfs.setup_hash
