@@ -35,17 +35,17 @@ are planned: see [Roadmap](#roadmap).
 
 ### Known limitations
 
-- **WSLg `[WARN:COPY MODE]` quirk.** WSLg's system-distro `/mnt/shared_memory`
-  (a `virtiofs` mount) intermittently fails with `Input/output error`, which
-  forces weston into `[WARN:COPY MODE]` (the window renders blank: only a
-  taskbar icon shows). This is a known WSLg bug (microsoft/wslg#179). The fix
-  must run from **Windows** (`wsl --system`), because `wsl` invoked from inside
-  the user distro runs in an isolated namespace and cannot touch the system
-  distro. `Start-BraveOrigin.ps1` / `Start-BraveOrigin.cmd` apply the fix
-  (remount a `tmpfs` at `/mnt/shared_memory` + restart weston) and then launch
-  `Brave.exe`. **Launch via `Start-BraveOrigin.cmd` (the Desktop shortcut
-  created by Setup.ps1), not `Brave.exe` directly**, or COPY MODE can return
-  after a full WSL restart.
+- **WSLg `[WARN:COPY MODE]` quirk (self-healing).** WSLg runs the RDP
+  compositor `weston` in the **system** distro. Its `/mnt/shared_memory`
+  (`virtiofs` mount) intermittently fails with `Input/output error`, forcing
+  weston into `[WARN:COPY MODE]` (the window renders via the slow RDP pixel
+  path). A weston-only restart just re-mounts the *same* broken virtiofs, so it
+  does **not** help. The only reliable cure is a **clean WSLg reset**
+  (`wsl --shutdown`), which re-initializes the virtiofs mount from a fresh
+  state. `Start-BraveOrigin.ps1` launches Brave, then inspects the live window
+  title for `[WARN:COPY MODE]`; if found it resets WSLg and relaunches (up to
+  twice). A healthy session is never disrupted. Known WSLg bug
+  (microsoft/wslg#1456, microsoft/WSL#40618).
 - **Tested on**: Windows 11, WSL `2.7.11.0`, WSLg `1.0.73.2`.
 - The packaged `Brave.exe` / `webview.dll` binaries are **not in the repo** (they
   are build outputs); they ship inside `Brave.zip` (see [Building](#building-bravezip)).
@@ -130,7 +130,6 @@ Ubuntu 22.04 rootfs.)
 
 ## Roadmap
 
-- Permanent fix for the first-run `[WARN:COPY MODE]` compositing quirk without a reboot.
 - Per-user vs. system install options.
 - Richer manager UI (update progress, one-click repair).
 - Signed installer.

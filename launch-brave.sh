@@ -20,11 +20,25 @@ if [ -z "$DISPLAY" ] && [ -S /mnt/wslg/.X11-unix/X0 ]; then
 fi
 
 mkdir -p /root/brave-data /root/.vnc /mnt/shared_memory
-# WSLg needs /mnt/shared_memory (tmpfs) mounted or it falls back to
-# [WARN:COPY MODE] and renders nothing (taskbar icon only). Mount it if missing.
+# Compat shim: ensure the user distro has a tmpfs at /mnt/shared_memory. This is
+# a SEPARATE mount from the SYSTEM distro's /mnt/shared_memory that weston
+# actually uses, so it does not affect weston - it only satisfies X11 clients
+# that probe the path.
 if ! mountpoint -q /mnt/shared_memory 2>/dev/null; then
     mount -t tmpfs tmpfs /mnt/shared_memory 2>/dev/null
 fi
+
+# Wait for the WSLg display to be ready before opening the window. A window
+# created while weston is still initializing can latch into [WARN:COPY MODE];
+# once latched, only a fresh window against a ready display clears it. (The
+# actual COPY MODE cure is a clean WSLg reset performed by the Windows-side
+# Start-BraveOrigin.ps1 if it detects the mode at launch.)
+for i in $(seq 1 15); do
+    if [ -n "$DISPLAY" ] && [ -S /mnt/wslg/.X11-unix/X0 ]; then
+        break
+    fi
+    sleep 1
+done
 
 # If Brave is already running, don't spawn a second instance.
 # Use -f: the process comm is truncated to "brave-origin-ni" (15-char limit),

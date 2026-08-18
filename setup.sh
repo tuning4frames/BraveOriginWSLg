@@ -116,20 +116,33 @@ else
     rm -f /tmp/brave.deb
 fi
 
-# --- Permanent COPY MODE fix ------------------------------------------------
-# WSLg needs a tmpfs at /mnt/shared_memory, otherwise the compositor (weston)
-# falls back to [WARN:COPY MODE] and renders nothing. Mount it at distro boot
-# via /etc/wsl.conf so it is ready before any GUI app and survives reboots.
-# (ensure-shm.sh is copied into /opt/app by Setup.ps1; here we just wire it up.)
-if [ -f /opt/app/ensure-shm.sh ]; then
-    chmod +x /opt/app/ensure-shm.sh
+# --- COPY MODE hardening (Windows-side self-heal) --------------------------
+# WSLg runs weston (the RDP compositor) in the SYSTEM distro. Its
+# /mnt/shared_memory (a virtiofs mount) intermittently fails with
+# "Input/output error", forcing weston into [WARN:COPY MODE] (the window
+# renders via the slow RDP pixel path). A weston-only restart just re-mounts
+# the same broken virtiofs and does NOT help; the only reliable cure is a
+# clean WSLg reset (wsl --shutdown), which re-initializes the virtiofs from a
+# fresh state.
+#
+# That reset is performed automatically by the Windows-side launcher
+# Start-BraveOrigin.ps1: it launches Brave, inspects the live window title
+# for "[WARN:COPY MODE]", and if found resets WSLg and relaunches.
+#
+# fix-shm.sh (copied into /opt/app by Setup.ps1) is a harmless user-distro
+# compat shim: it only ensures a tmpfs at the user distro's /mnt/shared_memory
+# (which does NOT affect weston). We still register it at boot via /etc/wsl.conf
+# so the shim is present early; it deliberately does NOT touch the system
+# distro or restart weston.
+if [ -f /opt/app/fix-shm.sh ]; then
+    chmod +x /opt/app/fix-shm.sh
     cat > /etc/wsl.conf <<'EOF'
 [boot]
-command = /opt/app/ensure-shm.sh
+command = /opt/app/fix-shm.sh
 EOF
-    echo "[brave/setup] COPY MODE fix: /etc/wsl.conf -> /opt/app/ensure-shm.sh"
+    echo "[brave/setup] boot shim: /etc/wsl.conf -> /opt/app/fix-shm.sh"
 else
-    echo "[brave/setup] WARNING: /opt/app/ensure-shm.sh missing; COPY MODE fix skipped"
+    echo "[brave/setup] WARNING: /opt/app/fix-shm.sh missing; boot shim skipped"
 fi
 
 touch /opt/.brave-installed

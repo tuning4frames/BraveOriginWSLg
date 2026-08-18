@@ -324,7 +324,7 @@ $installScript = {
         # --- Copy app scripts into the distro ---
         Set-Stage "Copying app files into the distro (/opt/app)"
         $wslApp = ConvertTo-WslPath $appDir
-        $files = @('setup.sh', 'start.sh', 'stop.sh', 'update.sh', 'launch-brave.sh', 'ensure-shm.sh', 'control.py', 'bridge.py', 'index.html')
+        $files = @('setup.sh', 'start.sh', 'stop.sh', 'update.sh', 'launch-brave.sh', 'fix-shm.sh', 'control.py', 'bridge.py', 'index.html')
         $quoted = ($files | ForEach-Object { "'$wslApp/$_'" }) -join ' '
         & $Report 40 "CMD: cp app files -> /opt/app/" $true
         Invoke-WslInDistro "mkdir -p /opt/app && cp $quoted /opt/app/ && chmod +x /opt/app/*.sh" 2>&1 | ForEach-Object { & $Report 45 $_ $true }
