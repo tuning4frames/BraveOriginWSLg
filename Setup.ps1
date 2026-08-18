@@ -352,8 +352,23 @@ $installScript = {
 
         & $Report 90 "Setup complete."
 
-        # --- Launch the manager (Brave.exe) ---
-        if (Test-Path $braveExe) {
+        # --- Launch the manager via the Windows-side launcher, which applies the
+        #     WSLg shared-memory fix before starting Brave.exe. Also drop a Desktop
+        #     shortcut to it so the fix runs on every normal launch. ---
+        $launcher = Join-Path $appDir 'Start-BraveOrigin.cmd'
+        if (Test-Path $launcher) {
+            Set-Stage "Launching Brave Origin (native window + manager UI)"
+            & $Report 95 "Launching Brave Origin..." $true
+            try {
+                $ws = New-Object -ComObject WScript.Shell
+                $link = $ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Brave Origin.lnk'))
+                $link.TargetPath = $launcher
+                $link.WorkingDirectory = $appDir
+                $link.Description = 'Brave Origin (native WSLg)'
+                $link.Save()
+            } catch { Write-LogLine ("Desktop shortcut creation failed: " + $_.Exception.Message) $true }
+            Start-Process -FilePath $launcher
+        } elseif (Test-Path $braveExe) {
             Set-Stage "Launching Brave.exe (native window + manager UI)"
             & $Report 95 "Launching Brave.exe..." $true
             Start-Process -FilePath $braveExe

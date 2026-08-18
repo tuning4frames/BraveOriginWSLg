@@ -35,11 +35,17 @@ are planned: see [Roadmap](#roadmap).
 
 ### Known limitations
 
-- **First-run WSLg compositing quirk.** On some machines the very first launch
-  shows `[WARN:COPY MODE]` in the WSLg log and the window may not appear until
-  you **reboot Windows once**. After that it works reliably. (A permanent fix
-  mounts a `tmpfs` at `/mnt/shared_memory` in the WSLg system distro; this is
-  applied automatically inside `linbox-Brave` on launch.)
+- **WSLg `[WARN:COPY MODE]` quirk.** WSLg's system-distro `/mnt/shared_memory`
+  (a `virtiofs` mount) intermittently fails with `Input/output error`, which
+  forces weston into `[WARN:COPY MODE]` (the window renders blank: only a
+  taskbar icon shows). This is a known WSLg bug (microsoft/wslg#179). The fix
+  must run from **Windows** (`wsl --system`), because `wsl` invoked from inside
+  the user distro runs in an isolated namespace and cannot touch the system
+  distro. `Start-BraveOrigin.ps1` / `Start-BraveOrigin.cmd` apply the fix
+  (remount a `tmpfs` at `/mnt/shared_memory` + restart weston) and then launch
+  `Brave.exe`. **Launch via `Start-BraveOrigin.cmd` (the Desktop shortcut
+  created by Setup.ps1), not `Brave.exe` directly**, or COPY MODE can return
+  after a full WSL restart.
 - **Tested on**: Windows 11, WSL `2.7.11.0`, WSLg `1.0.73.2`.
 - The packaged `Brave.exe` / `webview.dll` binaries are **not in the repo** (they
   are build outputs); they ship inside `Brave.zip` (see [Building](#building-bravezip)).
