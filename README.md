@@ -59,15 +59,55 @@ are planned: see [Roadmap](#roadmap).
 - The **WebView2 runtime** for the manager UI (Evergreen bootstrapper is installed
   automatically if missing)
 
-## Quick start (packaged release)
+## Quick start (manual setup)
 
-1. Download `Brave.zip` from the latest GitHub Release.
-2. Extract it anywhere.
-3. Run `Setup.exe` (or `Setup.ps1`).
-4. Brave Origin Nightly opens as its own Windows window; the manager UI is served
-   at `http://localhost:9612/`.
+There is no packaged `Brave.zip` release yet, so build the distro by hand:
 
-If you'd rather set things up by hand, see [`MANUAL_SETUP.md`](MANUAL_SETUP.md).
+### 1. WSL2 + WSLg
+
+```powershell
+wsl --install   # first time: also enables the VM platform (reboot required)
+wsl --update    # already have WSL: grab the latest WSLg
+```
+
+### 2. A `linbox-Brave` distro
+
+The launcher expects a dedicated distro named **`linbox-Brave`**. You need an
+Ubuntu 22.04 rootfs tarball (this repo does not ship one). Export an existing
+Ubuntu distro, or download a tarball, then import it:
+
+```powershell
+wsl --import linbox-Brave "$env:USERPROFILE\brave-distro" "linux\ubuntu-base.tar.gz"
+```
+
+### 3. Stage the scripts
+
+```powershell
+# From this repo folder, copy the app files into the distro:
+wsl -d linbox-Brave -u root bash -lc "mkdir -p /opt/app && cp /mnt/c/Users/<YOU>/Workspace/Brave*/{*.sh,*.py,index.html} /opt/app/ && chmod +x /opt/app/*.sh"
+```
+
+(Adjust the `/mnt/c/...` path to where you cloned this repo.)
+
+### 4. First-run setup
+
+```powershell
+wsl -d linbox-Brave -e bash /opt/app/setup.sh
+```
+
+Installs Brave's dependencies, the nightly apt repo, and `brave-origin-nightly`.
+
+### 5. Launch
+
+```powershell
+wsl -d linbox-Brave -e bash /opt/app/start.sh
+```
+
+Brave opens as its own Windows window; the manager UI API runs at
+`http://localhost:9612/` (open it in a browser for now: the `Brave.exe` WebView2
+loader is not packaged yet).
+
+Full step-by-step with troubleshooting: [`MANUAL_SETUP.md`](MANUAL_SETUP.md).
 
 ## How it works
 
