@@ -116,5 +116,21 @@ else
     rm -f /tmp/brave.deb
 fi
 
+# --- Permanent COPY MODE fix ------------------------------------------------
+# WSLg needs a tmpfs at /mnt/shared_memory, otherwise the compositor (weston)
+# falls back to [WARN:COPY MODE] and renders nothing. Mount it at distro boot
+# via /etc/wsl.conf so it is ready before any GUI app and survives reboots.
+# (ensure-shm.sh is copied into /opt/app by Setup.ps1; here we just wire it up.)
+if [ -f /opt/app/ensure-shm.sh ]; then
+    chmod +x /opt/app/ensure-shm.sh
+    cat > /etc/wsl.conf <<'EOF'
+[boot]
+command = /opt/app/ensure-shm.sh
+EOF
+    echo "[brave/setup] COPY MODE fix: /etc/wsl.conf -> /opt/app/ensure-shm.sh"
+else
+    echo "[brave/setup] WARNING: /opt/app/ensure-shm.sh missing; COPY MODE fix skipped"
+fi
+
 touch /opt/.brave-installed
 echo "[brave/setup] done: $(brave-origin-nightly --version)"
