@@ -5,7 +5,7 @@
 > Priorities: **fast and working** over a pretty all-in-one launcher.
 
 ## STATUS: IMPLEMENTED (2026-08-17)
-All Linux-side scripts + UI rewritten in `brave-origin-native/`:
+All Linux-side scripts + UI rewritten (now under `package/`):
 - `setup.sh`: no VNC stack; WSLg preflight added.
 - `start.sh`: launches Brave natively + `control.py`; no Xtigervnc/openbox/websockify/iptables-mirror.
 - `launch-brave.sh`: shared Brave invocation (GPU enabled).

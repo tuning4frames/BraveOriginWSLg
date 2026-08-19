@@ -77,17 +77,18 @@ Ubuntu 22.04 rootfs tarball (this repo does not ship one). Export an existing
 Ubuntu distro, or download a tarball, then import it:
 
 ```powershell
-wsl --import linbox-Brave "$env:USERPROFILE\brave-distro" "linux\ubuntu-base.tar.gz"
+wsl --import linbox-Brave "$env:USERPROFILE\brave-distro" "package\linux\ubuntu-base.tar.gz"
 ```
 
 ### 3. Stage the scripts
 
 ```powershell
-# From this repo folder, copy the app files into the distro:
-wsl -d linbox-Brave -u root bash -lc "mkdir -p /opt/app && cp /mnt/c/Users/<YOU>/Workspace/Brave*/{*.sh,*.py,index.html} /opt/app/ && chmod +x /opt/app/*.sh"
+# From this repo, copy the app files (in package/) into the distro:
+wsl -d linbox-Brave -u root bash -lc "mkdir -p /opt/app && cp /mnt/c/Users/<YOU>/Workspace/Brave*/package/{*.sh,*.py,index.html} /opt/app/ && chmod +x /opt/app/*.sh"
 ```
 
-(Adjust the `/mnt/c/...` path to where you cloned this repo.)
+(Adjust the `/mnt/c/...` path to where you cloned this repo. The runtime scripts
+live in the `package/` subfolder.)
 
 ### 4. First-run setup
 
@@ -132,22 +133,30 @@ brave-origin-nightly  ──►  native WSLg window (Wayland/XWayland)
 
 ## Project layout
 
+All runtime files live in **`package/`** (Windows installer, launcher, WSL scripts,
+assets). Markdown docs live in **`docs/`**.
+
 | Path | Purpose |
 |------|---------|
-| `Setup.ps1` / `setup-core.ps1` | Windows installer GUI + shared logic (requirements, import, launch). |
-| `Setup.exe` | Compiled loader (built from the `portable-linux-in-a-box` template). |
-| `setup.sh` | First-run install inside the distro (deps, Brave apt repo, `.deb`). |
-| `start.sh` | Boots audio + Brave window + `control.py` sidecar. |
-| `stop.sh` | Stops Brave and the sidecar. |
-| `launch-brave.sh` | Launches `brave-origin-nightly` as a native WSLg window. |
-| `update.sh` | Updates `brave-origin-nightly` via apt. |
-| `control.py` | Manager sidecar API. |
-| `bridge.py` | Redirects the root URL to the staged UI. |
-| `index.html` | Manager UI (Logs / Terminal / Settings). |
-| `app.json` | Launcher config consumed by `Brave.exe` (distro, ports, commands). |
-| `build-zip.ps1` | Packages the release `Brave.zip`. |
-| `linux/ubuntu-base.tar.gz` | Ubuntu 22.04 rootfs seed (bundled in `Brave.zip`). |
-| `MANUAL_SETUP.md` | Step-by-step manual install. |
+| `package/Setup.ps1` / `package/setup-core.ps1` | Windows installer GUI + shared logic (requirements, import, launch). |
+| `package/Start-BraveOrigin.cmd` / `.ps1` | Windows launcher (applies the WSLg shared-memory fix, then starts Brave). |
+| `package/Test-Setup.ps1` | Headless preflight self-test. |
+| `package/setup.sh` | First-run install inside the distro (deps, Brave apt repo, `.deb`). |
+| `package/start.sh` | Boots audio + Brave window + `control.py` sidecar. |
+| `package/stop.sh` | Stops Brave and the sidecar. |
+| `package/launch-brave.sh` | Launches `brave-origin-nightly` as a native WSLg window. |
+| `package/update.sh` | Updates `brave-origin-nightly` via apt. |
+| `package/control.py` | Manager sidecar API. |
+| `package/bridge.py` | Optional redirect shim (9091 → 9612) for the manager UI. |
+| `package/index.html` | Manager UI (Logs / Terminal / Settings). |
+| `package/app.json` | Launcher config consumed by `Brave.exe` (distro, ports, commands). |
+| `package/build-zip.ps1` | Packages the release `Brave.zip`. |
+| `package/linux/ubuntu-base.tar.gz` | Ubuntu 22.04 rootfs seed (bundled in `Brave.zip`). |
+| `docs/MANUAL_SETUP.md` | Project documentation / manual install. |
+
+> The compiled `Brave.exe` / `webview.dll` loader (from the
+> `portable-linux-in-a-box` template) is **not in the repo**; it is dropped into
+> `package/` when building a release (see [Building](#building-bravezip)).
 
 ## Building `Brave.zip`
 
@@ -156,12 +165,12 @@ the `portable-linux-in-a-box` template). To produce a release:
 
 1. Obtain `Brave.exe` + `webview.dll` (build the template, or grab them from a
    previous release).
-2. Drop them into this folder next to `build-zip.ps1`.
+2. Drop them into `package/` next to `build-zip.ps1`.
 3. Run:
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\build-zip.ps1
-   ```
+    ```powershell
+    powershell -ExecutionPolicy Bypass -File .\package\build-zip.ps1
+    ```
 
 It bundles the scripts, `index.html`, `app.json`, the rootfs, and the two binaries
 into `Brave.zip`. (`linux/ubuntu-base.tar.gz` must already be present: it is
@@ -177,7 +186,7 @@ Ubuntu 22.04 rootfs.)
 
 ## License
 
-**Non-commercial / personal use only.** See [`LICENSE`](LICENSE). You may use,
+**Non-commercial / personal use only.** See [`LICENSE`](../LICENSE). You may use,
 modify, and share this project for personal, non-commercial purposes; commercial
 use requires the copyright holder's permission.
 

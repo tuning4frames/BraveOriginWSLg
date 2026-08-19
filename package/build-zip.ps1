@@ -26,9 +26,6 @@ $files = @(
     'control.py',
     'fix-shm.sh',
     'index.html',
-    'LICENSE',
-    'MANUAL_SETUP.md',
-    'README.md',
     'setup.sh',
     'setup-core.ps1',
     'Setup.ps1',
@@ -49,6 +46,26 @@ foreach ($f in $files) {
     } else {
         $missing += $f
     }
+}
+
+# Docs live in ../docs (sibling of this script's folder); stage them flat so the
+# packaged README's relative links resolve inside the zip.
+$docsDir = Join-Path (Split-Path $src -Parent) 'docs'
+foreach ($d in @('README.md', 'MANUAL_SETUP.md')) {
+    $srcPath = Join-Path $docsDir $d
+    if (Test-Path $srcPath) {
+        Copy-Item $srcPath (Join-Path $dst $d)
+    } else {
+        $missing += "docs/$d"
+    }
+}
+
+# LICENSE sits at the repo root (sibling of package/).
+$rootDir = Split-Path $src -Parent
+if (Test-Path (Join-Path $rootDir 'LICENSE')) {
+    Copy-Item (Join-Path $rootDir 'LICENSE') (Join-Path $dst 'LICENSE')
+} else {
+    $missing += 'LICENSE'
 }
 
 # README references no binary screenshots in this build (kept out of the repo
